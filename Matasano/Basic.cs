@@ -9,20 +9,60 @@ namespace Matasano
 {
     public static class Basic
     {
+        public static Dictionary<char, double> EnglishLetterFrequencies {
+            get
+            {
+                // source: http://en.wikipedia.org/wiki/Letter_frequency
+                return new Dictionary<char, double>
+                {
+                    {'a',0.08167}, {'b',0.01492}, {'c',0.02782}, {'d',0.04253}, {'e',0.13000},
+                    {'f',0.02228}, {'g',0.02015}, {'h',0.06094}, {'i',0.06966}, {'j',0.00153},
+                    {'k',0.00772}, {'l',0.04025}, {'m',0.02406}, {'n',0.06749}, {'o',0.07507},
+                    {'p',0.01929}, {'q',0.00095}, {'r',0.05987}, {'s',0.06327}, {'t',0.09056},
+                    {'u',0.02758}, {'v',0.00978}, {'w',0.02360}, {'x',0.00150}, {'y',0.01974},
+                    {'z',0.00074},
+                };
+            }
+        }
 
-        public static byte[] AsciiToByteArray(string ascii)
+        public static Dictionary<char, double> EnglishCharacterFrequencies
+        {
+            get
+            {
+                // source: http://millikeys.sourceforge.net/freqanalysis.html
+                return new Dictionary<char, double>()
+                {
+                    {' ', 0.187559814195}, {'e', 0.096064558135}, {'t', 0.070228741129}, {'a', 0.062089098108}, {'o', 0.058436260858}, 
+                    {'i', 0.052205454975}, {'n', 0.052090056092}, {'h', 0.048683276415}, {'s', 0.047751779968}, {'r', 0.044349942550}, 
+                    {'d', 0.035214859696}, {'l', 0.032025541986}, {'u', 0.022513177595}, {'m', 0.019438050430}, {'c', 0.018796166182}, 
+                    {'w', 0.018208358954}, {'g', 0.016586113169}, {'f', 0.016238604461}, {'y', 0.015572252662}, {'p', 0.013135846285}, 
+                    {',', 0.012407140609}, {'.', 0.012136078735}, {'b', 0.011912624345}, {'k', 0.007398625780}, {'v', 0.007118620647}, 
+                    {'"', 0.006654613624}, {'\'', 0.004406215323}, {'-', 0.002593184358}, {'?', 0.001218422297}, {'x', 0.001178705312}, 
+                    {'j', 0.001162693536}, {';', 0.000807421385}, {'!', 0.000779404017}, {'Q', 0.000713427718}, {'z', 0.000696923272}, 
+                    {':', 0.000250877961}, {'1', 0.000163742780}, {'0', 0.000103992275}, {')', 0.000100424307}, {'*', 0.000099765685}, 
+                    {'(', 0.000099104470}, {'2', 0.000095891742}, {'`', 0.000094011817}, {'3', 0.000066873477}, {'9', 0.000064786111}, 
+                    {'5', 0.000056695951}, {'4', 0.000054922338}, {'8', 0.000048885834}, {'7', 0.000044402536}, {'6', 0.000044099155}, 
+                    {'/', 0.000043450905}, {'_', 0.000030091768}, {'[', 0.000029995827}, {']', 0.000029910258}, {'=', 0.000025668110}, 
+                    {'>', 0.000011686652}, {'~', 0.000010545732}, {'<', 0.000010359036}, {'#', 0.000008219811}, {'&', 0.000006975171}, 
+                    {'{', 0.000005854995}, {'}', 0.000005554207}, {'^', 0.000004439216}, {'|', 0.000003920616}, {'\\', 0.000003542038}, 
+                    {'@', 0.000003510922}, {'%', 0.000003020845}, {'$', 0.000002722650}, 
+                };
+            }
+        } 
+
+        public static byte[] AsciiToBytes(string ascii)
         {
             return Encoding.ASCII.GetBytes(ascii);
         }
 
-        public static string ByteArrayToAscii(byte[] byteArray)
+        public static string BytesToAscii(byte[] bytes)
         {
-            return Encoding.ASCII.GetString(byteArray);
+            return Encoding.ASCII.GetString(bytes);
         }
 
-        public static string ByteArrayToHex(byte[] byteArray)
+        public static string BytesToHex(byte[] bytes)
         {
-            return BitConverter.ToString(byteArray).Replace("-", "");
+            return BitConverter.ToString(bytes).Replace("-", "");
         }
 
         public static string ByteArrayToBase64(byte[] byteArray)
@@ -64,42 +104,50 @@ namespace Matasano
             return Xor(cipher, keyRepeat);
         }
 
+        public static List<Tuple<byte, double>> GetByteFrequencies(byte[] bytes)
+        {
+            var results = new List<Tuple<byte, double>>();
+            var contents = new Dictionary<byte, int>();
+
+            foreach (var b in bytes)
+            {
+                if (contents.ContainsKey(b))
+                    contents[b] ++;
+                else
+                    contents.Add(b, 1);
+            }
+
+            var n = bytes.Length;
+            foreach (var c in contents)
+            {
+                var weight = c.Value / (double)n;
+                results.Add(new Tuple<byte, double>(c.Key, weight));
+            }
+
+            return results;
+        }
+
         /// <summary>
         /// Uses character frequency to estimate the probability that the text provided is written in English.
         /// </summary>
-        /// <param name="plainText">A string of text.</param>
+        /// <param name="englishTextBytes">A bytearray of English text.</param>
+        /// <param name="englishDictionary">The dictionary to compare against.</param>
         /// <returns>0 to 1 probability of input text being English.</returns>
-        public static double IsEnglish(string plainText)
+        public static double IsEnglish(byte[] englishTextBytes, Dictionary<char, double> englishDictionary)
         {
             var plainTextContents = new Dictionary<char, int>();
 
-            // source: http://en.wikipedia.org/wiki/Letter_frequency
-            var englishCharacterFrequencies = new Dictionary<char, double>
-            {
-                {'a',0.08167}, {'b',0.01492}, {'c',0.02782}, {'d',0.04253}, {'e',0.13000},
-                {'f',0.02228}, {'g',0.02015}, {'h',0.06094}, {'i',0.06966}, {'j',0.00153},
-                {'k',0.00772}, {'l',0.04025}, {'m',0.02406}, {'n',0.06749}, {'o',0.07507},
-                {'p',0.01929}, {'q',0.00095}, {'r',0.05987}, {'s',0.06327}, {'t',0.09056},
-                {'u',0.02758}, {'v',0.00978}, {'w',0.02360}, {'x',0.00150}, {'y',0.01974},
-                {'z',0.00074},
-            };
+            var englishFrequencies = englishDictionary;
 
-            foreach (var character in plainText.ToLower())
-            {
-                if (plainTextContents.ContainsKey(character))
-                    plainTextContents[character] += 1;
-                else
-                    plainTextContents.Add(character, 1);
-            }
+            var byteFrequencies = GetByteFrequencies(englishTextBytes);
 
             var score = 0d;
-            foreach (var character in plainTextContents)
+            foreach (var f in byteFrequencies)
             {
-                if (englishCharacterFrequencies.ContainsKey(character.Key))
+                if (englishFrequencies.ContainsKey((char)f.Item1))
                 {
-                    var weight = character.Value / (double)plainText.Length;
-                    var ideal = englishCharacterFrequencies[character.Key];
-                    score += ideal * (1 - Math.Abs(weight - ideal));
+                    var idealWeight = englishFrequencies[(char)f.Item1];
+                    score += idealWeight * (1 - Math.Abs(f.Item2 - idealWeight));
                 }
             }
 
@@ -110,40 +158,22 @@ namespace Matasano
         /// Estimates how close a given string (as byte array) is to being English distributed.
         /// </summary>
         /// <param name="bytes">String represented as byte array</param>
+        /// <param name="languageDictionary">The dictionary to compare against.</param>
         /// <param name="matches">List of tuples of (weight difference, byte-word, character)</param>
         /// <returns>0 to 1 distribution.</returns>
-        public static double IsEnglishDistributed(byte[] bytes, out List<Tuple<double, byte, char>> matches)
+        public static double IsLanguage(byte[] bytes, Dictionary<char, double> languageDictionary, out List<Tuple<double, byte, char>> matches)
         {
-            var byteWords = new Dictionary<byte, int>();
-
-            // source: http://en.wikipedia.org/wiki/Letter_frequency
-            var englishCharacters = new Dictionary<char, double>
-            {
-                {'a',0.08167}, {'b',0.01492}, {'c',0.02782}, {'d',0.04253}, {'e',0.13000},
-                {'f',0.02228}, {'g',0.02015}, {'h',0.06094}, {'i',0.06966}, {'j',0.00153},
-                {'k',0.00772}, {'l',0.04025}, {'m',0.02406}, {'n',0.06749}, {'o',0.07507},
-                {'p',0.01929}, {'q',0.00095}, {'r',0.05987}, {'s',0.06327}, {'t',0.09056},
-                {'u',0.02758}, {'v',0.00978}, {'w',0.02360}, {'x',0.00150}, {'y',0.01974},
-                {'z',0.00074},
-            };
-
-            // Build list of byte-words and their counts
-            foreach (var b in bytes)
-            {
-                if (byteWords.ContainsKey(b))
-                    byteWords[b] += 1;
-                else
-                    byteWords.Add(b, 1);
-            }
+            // Get byte frequency list
+            var byteFrequencies = GetByteFrequencies(bytes);
 
             // Build ordered list of weight differences
             var stack = (
-                from b in byteWords 
-                from c in englishCharacters 
+                from b in byteFrequencies
+                from c in languageDictionary 
                 select 
                     new Tuple<double, byte, char>(
-                        Math.Abs((double) b.Value/bytes.Length - c.Value), 
-                        b.Key, 
+                        Math.Abs(b.Item2 - c.Value), 
+                        b.Item1, 
                         c.Key)).ToList();
             stack.Sort((first, next) => first.Item1.CompareTo(next.Item1));
 
@@ -152,14 +182,28 @@ namespace Matasano
             while (stack.Count > 0)
             {
                 var top = stack[0]; stack.RemoveAt(0);
-                if (matches.All(x => x.Item3 != top.Item3 && x.Item2 != top.Item2))
-                {
-                    var value = englishCharacters[top.Item3]*(1d - top.Item1);
-                    matches.Add(new Tuple<double, byte, char>(value, top.Item2, top.Item3));
-                }
+                if (matches.Any(x => x.Item3 == top.Item3 || x.Item2 == top.Item2)) continue;
+                var value = languageDictionary[top.Item3] * (1d - top.Item1);
+                matches.Add(new Tuple<double, byte, char>(value, top.Item2, top.Item3));
             }
 
             return matches.Sum(match => match.Item1);
+        }
+
+        public static byte[] GetKeysFromLanguageMatches(List<Tuple<double, byte, char>> matches, int count)
+        {
+            var keys = new Dictionary<byte, double>();
+
+            foreach (var match in matches)
+            {
+                var key = Xor(AsciiToBytes(match.Item3 + ""), new[] { match.Item2 });
+                if (keys.ContainsKey(key[0]))
+                    keys[key[0]] += match.Item1;
+                else
+                    keys.Add(key[0], match.Item1);
+            }
+
+            return keys.OrderByDescending(x => x.Value).ToList().GetRange(0,count).Select(x => x.Key).ToArray();
         }
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Mime;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Matasano.Test
@@ -32,7 +33,7 @@ namespace Matasano.Test
             var fixedXorByteArray = Basic.HexToByteArray(fixedXor);
 
             var xor = Basic.Xor(inputByteArray, fixedXorByteArray);
-            Assert.AreEqual(Basic.ByteArrayToHex(xor).ToUpper(), target.ToUpper());
+            Assert.AreEqual(Basic.BytesToHex(xor).ToUpper(), target.ToUpper());
         }
 
         [TestMethod]
@@ -51,8 +52,8 @@ namespace Matasano.Test
 
                 var plainBytes = Basic.Decipher(cipherTextBytes, keyBytes);
 
-                var plainText = Basic.ByteArrayToAscii(plainBytes);
-                var score = Basic.IsEnglish(plainText);
+                var score = Basic.IsEnglish(plainBytes, Basic.EnglishCharacterFrequencies);
+                var plainText = Basic.BytesToAscii(plainBytes);
 
                 results.Add(new Tuple<double, char, string>(score, tests[i], plainText));
             }
@@ -60,7 +61,7 @@ namespace Matasano.Test
             results.Sort((firstPair, nextPair) => nextPair.Item1.CompareTo(firstPair.Item1));
             foreach (var result in results)
             {
-                Console.WriteLine("{0:P1}% - key: {1} - string: {2}", result.Item1, result.Item2, result.Item3.Replace("\n","\\n"));
+                Console.WriteLine("{0:P1} - key: {1} - message: {2}", result.Item1, result.Item2, result.Item3.Replace("\n","\\n"));
             }
         }
 
@@ -69,43 +70,81 @@ namespace Matasano.Test
         {
             const string path = @"..\..\Assets\S1C4.txt";
 
-            string cipher;
+            var ciphers = new List<string>();
+            var cipherMatches = new List<List<Tuple<double, byte, char>>>();
 
             using (var r = new StreamReader(path))
             {
                 string line;
                 while ((line = r.ReadLine()) != null)
                 {
-                    List<Tuple<double,byte,char>> matches;
-                    var score = Basic.IsEnglishDistributed(Basic.HexToByteArray(line), out matches);
+                    List<Tuple<double, byte, char>> matches;
+                    var score = Basic.IsLanguage(Basic.HexToByteArray(line), Basic.EnglishCharacterFrequencies, out matches);
                     
-                    Console.WriteLine("{0:P} - {1}", score, line);
+                    if (score <= 0.8) continue;
+                    ciphers.Add(line);
+                    cipherMatches.Add(matches);
+                }
+            }
+
+            for (var i=0; i<ciphers.Count; i++)
+            {
+                var cipher = ciphers[i];
+                var cipherMatch = cipherMatches[i];
+
+                Console.WriteLine("\n-- Cipher: {0} --", cipher);
+
+                var keys = Basic.GetKeysFromLanguageMatches(cipherMatch, 5);
+                foreach (var key in keys)
+                {
+                    var translation = Basic.Decipher(Basic.HexToByteArray(cipher), new[] {key});
+                    if(Basic.IsEnglish(translation, Basic.EnglishCharacterFrequencies) > 0.5)
+                        Console.WriteLine("key: {0}[{1}] - trans: {2}",
+                            Basic.BytesToHex(new[] { key }),
+                            Basic.BytesToAscii(new[] { key }),
+                            Basic.BytesToAscii(translation));
                 }
             }
         }
 
         [TestMethod]
-        public void TestIsEnglishDistributed()
+        public void TestIsLanguage()
         {
-            //const string cipherText = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
-            const string plaintext = @"The NSOpenGLView class is a lightweight subclass of the NSView class that provides convenience methods for setting up OpenGL drawing. An NSOpenGLView object maintains an NSOpenGLPixelFormat object and an NSOpenGLContext object into which OpenGL calls can be rendered. It provides methods for accessing and managing the pixel format object and the rendering context, and handles notification of visible region changes.
-                                    An NSOpenGLView object does not support subviews. You can, however, divide the view into multiple rendering areas using the OpenGL function glViewport.
-                                    This section provides step-by-step instructions for creating a simple Cocoa application that draws OpenGL content to a view. The tutorial assumes that you know how to use Xcode and Interface Builder. If you have never created an application using the Xcode development environment, see Getting Started with Tools.";
-            var pt = plaintext.ToLower().Replace(" ", "");
+            const string path = @"..\..\Assets\TestIsEnglishDistributed.txt";
 
-            var bytes = Basic.AsciiToByteArray(pt);
-            var matches = new List<Tuple<double, byte, char>>();
+            string plaintext;
+            using (var s = new StreamReader(path))
+            {
+                plaintext = s.ReadToEnd().ToLower();
+            }
 
-            var score = Basic.IsEnglishDistributed(bytes, out matches);
+            var bytes = Basic.AsciiToBytes(plaintext);
+            List<Tuple<double, byte, char>> matches;
+            
+            var score = Basic.IsLanguage(bytes, Basic.EnglishCharacterFrequencies, out matches);
             matches.Sort((first, next) => next.Item1.CompareTo(first.Item1));
 
-            Console.WriteLine("-- Score: {0:P} English --", score);
+            var keys = new Dictionary<byte, double>();
+
+            Console.WriteLine("-- {0:P} similar to English character distribution --", score);
             foreach (var match in matches)
             {
-                Console.WriteLine("Score: {0:P} - Char: {1} - Byte: {2} - Xor: {3}", 
+                var key = Basic.Xor(Basic.AsciiToBytes(match.Item3 + ""),new []{match.Item2});
+                if (keys.ContainsKey(key[0]))
+                    keys[key[0]] += match.Item1;
+                else
+                    keys.Add(key[0], match.Item1);
+
+                Console.WriteLine("Score: {0:P} - Char: {1} - Byte: {2} - Key: {3}", 
                     match.Item1, match.Item3, 
-                    Basic.ByteArrayToAscii(new []{match.Item2}),
-                    Basic.ByteArrayToHex(Basic.Xor(Basic.AsciiToByteArray(match.Item3 + ""),new []{match.Item2})));
+                    Basic.BytesToAscii(new []{match.Item2}),
+                    Basic.BytesToHex(key));
+            }
+
+            Console.WriteLine("\n-- Possible Keys --");
+            foreach (var key in keys.OrderByDescending(x => x.Value))
+            {
+                Console.WriteLine("score: {0:P} - key: {1}", key.Value, Basic.BytesToHex(new [] {key.Key}));
             }
         }
     }
