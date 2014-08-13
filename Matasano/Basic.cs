@@ -152,18 +152,14 @@ namespace Matasano
             while (stack.Count > 0)
             {
                 var top = stack[0]; stack.RemoveAt(0);
-                if(matches.All(x => x.Item3 != top.Item3 && x.Item2 != top.Item2))
-                    matches.Add(top);
+                if (matches.All(x => x.Item3 != top.Item3 && x.Item2 != top.Item2))
+                {
+                    var value = englishCharacters[top.Item3]*(1d - top.Item1);
+                    matches.Add(new Tuple<double, byte, char>(value, top.Item2, top.Item3));
+                }
             }
 
-            // Finally, score the englishiness of the input
-            var score = 0d;
-            foreach (var match in matches)
-            {
-                var ideal = englishCharacters[match.Item3];
-                score += (ideal * (1 - match.Item1));
-            }
-            return score;
+            return matches.Sum(match => match.Item1);
         }
     }
 }

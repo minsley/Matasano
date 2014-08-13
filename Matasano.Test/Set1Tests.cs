@@ -87,12 +87,17 @@ namespace Matasano.Test
         [TestMethod]
         public void TestIsEnglishDistributed()
         {
-            const string cipherText = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
+            //const string cipherText = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
+            const string plaintext = @"The NSOpenGLView class is a lightweight subclass of the NSView class that provides convenience methods for setting up OpenGL drawing. An NSOpenGLView object maintains an NSOpenGLPixelFormat object and an NSOpenGLContext object into which OpenGL calls can be rendered. It provides methods for accessing and managing the pixel format object and the rendering context, and handles notification of visible region changes.
+                                    An NSOpenGLView object does not support subviews. You can, however, divide the view into multiple rendering areas using the OpenGL function glViewport.
+                                    This section provides step-by-step instructions for creating a simple Cocoa application that draws OpenGL content to a view. The tutorial assumes that you know how to use Xcode and Interface Builder. If you have never created an application using the Xcode development environment, see Getting Started with Tools.";
+            var pt = plaintext.ToLower().Replace(" ", "");
 
-            var bytes = Basic.HexToByteArray(cipherText);
+            var bytes = Basic.AsciiToByteArray(pt);
             var matches = new List<Tuple<double, byte, char>>();
 
             var score = Basic.IsEnglishDistributed(bytes, out matches);
+            matches.Sort((first, next) => next.Item1.CompareTo(first.Item1));
 
             Console.WriteLine("-- Score: {0:P} English --", score);
             foreach (var match in matches)
@@ -102,16 +107,6 @@ namespace Matasano.Test
                     Basic.ByteArrayToAscii(new []{match.Item2}),
                     Basic.ByteArrayToHex(Basic.Xor(Basic.AsciiToByteArray(match.Item3 + ""),new []{match.Item2})));
             }
-
-            var first = matches.First();
-            var key = Basic.Xor(new[] { first.Item2 }, Basic.AsciiToByteArray("X"));//first.Item3 + ""));
-            var keyChar = Basic.ByteArrayToAscii(key);
-
-            Console.WriteLine("\n-- Key: {0}[{1}] --", Basic.ByteArrayToHex(key), keyChar);
-            Console.WriteLine("Original: " + cipherText);
-            var transbytes = Basic.Decipher(Basic.HexToByteArray(cipherText), key);
-            Console.WriteLine("Deciphered: " + Basic.ByteArrayToHex(transbytes));
-            Console.WriteLine("Plaintext: " + Basic.ByteArrayToAscii(transbytes));
         }
     }
 }
