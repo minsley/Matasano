@@ -50,7 +50,7 @@ namespace Matasano.Test
                 var keyBytes = Basic.HexToByteArray(key);
                 var cipherTextBytes = Basic.HexToByteArray(cipherText);
 
-                var plainBytes = Basic.Decipher(cipherTextBytes, keyBytes);
+                var plainBytes = Basic.XorRepeatKey(cipherTextBytes, keyBytes);
 
                 var score = Basic.IsEnglish(plainBytes, Basic.EnglishCharacterFrequencies);
                 var plainText = Basic.BytesToAscii(plainBytes);
@@ -97,7 +97,7 @@ namespace Matasano.Test
                 var keys = Basic.GetKeysFromLanguageMatches(cipherMatch, 5);
                 foreach (var key in keys)
                 {
-                    var translation = Basic.Decipher(Basic.HexToByteArray(cipher), new[] {key});
+                    var translation = Basic.XorRepeatKey(Basic.HexToByteArray(cipher), new[] {key});
                     if(Basic.IsEnglish(translation, Basic.EnglishCharacterFrequencies) > 0.5)
                         Console.WriteLine("key: {0}[{1}] - trans: {2}",
                             Basic.BytesToHex(new[] { key }),
@@ -108,44 +108,17 @@ namespace Matasano.Test
         }
 
         [TestMethod]
-        public void TestIsLanguage()
+        public void TestS1C5()
         {
-            const string path = @"..\..\Assets\TestIsEnglishDistributed.txt";
+            const string message = "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
+            const string target = "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f";
+            const string key = "ICE";
 
-            string plaintext;
-            using (var s = new StreamReader(path))
-            {
-                plaintext = s.ReadToEnd().ToLower();
-            }
-
-            var bytes = Basic.AsciiToBytes(plaintext);
-            List<Tuple<double, byte, char>> matches;
-            
-            var score = Basic.IsLanguage(bytes, Basic.EnglishCharacterFrequencies, out matches);
-            matches.Sort((first, next) => next.Item1.CompareTo(first.Item1));
-
-            var keys = new Dictionary<byte, double>();
-
-            Console.WriteLine("-- {0:P} similar to English character distribution --", score);
-            foreach (var match in matches)
-            {
-                var key = Basic.Xor(Basic.AsciiToBytes(match.Item3 + ""),new []{match.Item2});
-                if (keys.ContainsKey(key[0]))
-                    keys[key[0]] += match.Item1;
-                else
-                    keys.Add(key[0], match.Item1);
-
-                Console.WriteLine("Score: {0:P} - Char: {1} - Byte: {2} - Key: {3}", 
-                    match.Item1, match.Item3, 
-                    Basic.BytesToAscii(new []{match.Item2}),
-                    Basic.BytesToHex(key));
-            }
-
-            Console.WriteLine("\n-- Possible Keys --");
-            foreach (var key in keys.OrderByDescending(x => x.Value))
-            {
-                Console.WriteLine("score: {0:P} - key: {1}", key.Value, Basic.BytesToHex(new [] {key.Key}));
-            }
+            var messageBytes = Basic.AsciiToBytes(message);
+            var keyBytes = Basic.AsciiToBytes(key);
+            var eMessageBytes = Basic.XorRepeatKey(messageBytes, keyBytes);
+            var eMessage = Basic.BytesToHex(eMessageBytes);
+            Assert.AreEqual(target, eMessage);
         }
     }
 }

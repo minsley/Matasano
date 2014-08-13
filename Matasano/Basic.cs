@@ -62,7 +62,7 @@ namespace Matasano
 
         public static string BytesToHex(byte[] bytes)
         {
-            return BitConverter.ToString(bytes).Replace("-", "");
+            return BitConverter.ToString(bytes).Replace("-", "").ToLower();
         }
 
         public static string ByteArrayToBase64(byte[] byteArray)
@@ -97,11 +97,11 @@ namespace Matasano
             return xor;
         }
 
-        public static byte[] Decipher(byte[] cipher, byte[] key)
+        public static byte[] XorRepeatKey(byte[] input, byte[] key)
         {
-            var keyRepeat = new byte[cipher.Length];
-            for (var i = 0; i < cipher.Length; i++) keyRepeat[i] = key[i % key.Length];
-            return Xor(cipher, keyRepeat);
+            var keyRepeat = new byte[input.Length];
+            for (var i = 0; i < input.Length; i++) keyRepeat[i] = key[i % key.Length];
+            return Xor(input, keyRepeat);
         }
 
         public static List<Tuple<byte, double>> GetByteFrequencies(byte[] bytes)

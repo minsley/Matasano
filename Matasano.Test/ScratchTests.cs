@@ -14,6 +14,47 @@ namespace Matasano.Test
     public class ScratchTests
     {
         [TestMethod]
+        public void TestIsLanguage()
+        {
+            const string path = @"..\..\Assets\TestIsEnglishDistributed.txt";
+
+            string plaintext;
+            using (var s = new StreamReader(path))
+            {
+                plaintext = s.ReadToEnd().ToLower();
+            }
+
+            var bytes = Basic.AsciiToBytes(plaintext);
+            List<Tuple<double, byte, char>> matches;
+
+            var score = Basic.IsLanguage(bytes, Basic.EnglishCharacterFrequencies, out matches);
+            matches.Sort((first, next) => next.Item1.CompareTo(first.Item1));
+
+            var keys = new Dictionary<byte, double>();
+
+            Console.WriteLine("-- {0:P} similar to English character distribution --", score);
+            foreach (var match in matches)
+            {
+                var key = Basic.Xor(Basic.AsciiToBytes(match.Item3 + ""), new[] { match.Item2 });
+                if (keys.ContainsKey(key[0]))
+                    keys[key[0]] += match.Item1;
+                else
+                    keys.Add(key[0], match.Item1);
+
+                Console.WriteLine("Score: {0:P} - Char: {1} - Byte: {2} - Key: {3}",
+                    match.Item1, match.Item3,
+                    Basic.BytesToAscii(new[] { match.Item2 }),
+                    Basic.BytesToHex(key));
+            }
+
+            Console.WriteLine("\n-- Possible Keys --");
+            foreach (var key in keys.OrderByDescending(x => x.Value))
+            {
+                Console.WriteLine("score: {0:P} - key: {1}", key.Value, Basic.BytesToHex(new[] { key.Key }));
+            }
+        }
+
+        [TestMethod]
         public void ParseCharacterCountsFile()
         {
             const string path = @"..\..\Assets\CharacterCounts-Fiction.txt";
