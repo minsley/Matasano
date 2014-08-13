@@ -120,5 +120,14 @@ namespace Matasano.Test
             var eMessage = Basic.BytesToHex(eMessageBytes);
             Assert.AreEqual(target, eMessage);
         }
+
+        [TestMethod]
+        public void TestS1C6()
+        {
+            var keysizes = new int[38];
+            for (var i = 2; i < 41; i++) keysizes[i] = i;
+
+
+        }
     }
 }

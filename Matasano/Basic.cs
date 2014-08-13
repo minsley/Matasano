@@ -88,7 +88,7 @@ namespace Matasano
 
         public static byte[] Xor(byte[] buf1, byte[] buf2)
         {
-            if (buf1.Length != buf2.Length) throw new Exception("Inputs must be equal length.");
+            if (buf1.Length != buf2.Length) throw new Exception("Xor inputs must be equal length.");
             var xor = new byte[buf1.Length];
             for (var i = 0; i < buf1.Length; i++)
             {
@@ -102,6 +102,22 @@ namespace Matasano
             var keyRepeat = new byte[input.Length];
             for (var i = 0; i < input.Length; i++) keyRepeat[i] = key[i % key.Length];
             return Xor(input, keyRepeat);
+        }
+
+        public static int GetHammingDistance(byte[] input1, byte[] input2)
+        {
+            if (input1.Length != input2.Length) throw new Exception("Inputs must be equal length.");
+
+            var result = 0;
+            for (var i = 0; i < input1.Length; i++)
+            {
+                var xor = input1[i] ^ input2[i];
+                for (var j = 0; j <= 7; j++)
+                {
+                    result += (xor >> j) & 1;
+                }
+            }
+            return result;
         }
 
         public static List<Tuple<byte, double>> GetByteFrequencies(byte[] bytes)

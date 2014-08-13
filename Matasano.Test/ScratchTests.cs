@@ -14,6 +14,21 @@ namespace Matasano.Test
     public class ScratchTests
     {
         [TestMethod]
+        public void TestGetHammingDistance()
+        {
+            const string input1 = "this is a test";
+            const string input2 = "wokka wokka!!!";
+            const int hammingDistance = 37;
+
+            var input1Bytes = Basic.AsciiToBytes(input1);
+            var input2Bytes = Basic.AsciiToBytes(input2);
+
+            var result = Basic.GetHammingDistance(input1Bytes, input2Bytes);
+
+            Assert.AreEqual(hammingDistance, result);
+        }
+
+        [TestMethod]
         public void TestIsLanguage()
         {
             const string path = @"..\..\Assets\TestIsEnglishDistributed.txt";

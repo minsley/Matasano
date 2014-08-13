@@ -63,6 +63,7 @@
   <ItemGroup>
     <Content Include="Assets\CharacterCounts-Fiction.txt" />
     <Content Include="Assets\S1C4.txt" />
+    <Content Include="Assets\S1C6.txt" />
     <Content Include="Assets\TestIsEnglishDistributed.txt" />
   </ItemGroup>
   <Choose>
