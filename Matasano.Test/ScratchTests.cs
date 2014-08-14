@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -43,7 +44,6 @@ namespace Matasano.Test
             List<Tuple<double, byte, char>> matches;
 
             var score = Basic.IsLanguage(bytes, Basic.EnglishCharacterFrequencies, out matches);
-            matches.Sort((first, next) => next.Item1.CompareTo(first.Item1));
 
             var keys = new Dictionary<byte, double>();
 
@@ -100,6 +100,30 @@ namespace Matasano.Test
             foreach (var weight in weights)
             {
                 Console.WriteLine("{0} {1:F12}", weight.Key, weight.Value);
+            }
+        }
+
+        [TestMethod]
+        public void TestGetRepeatKeySplit()
+        {
+            const string message = "0000011111";
+
+            Console.WriteLine("Message: {0}\n", message);
+
+            var messageB = Basic.AsciiToBytes(message);
+            var split2 = Basic.GetRepeatKeySplit(messageB, 2);
+            var split5 = Basic.GetRepeatKeySplit(messageB, 5);
+
+            Console.WriteLine("Split on 2key:\n");
+            foreach (var split in split2)
+            {
+                    Console.WriteLine(Basic.BytesToAscii(split));
+            }
+
+            Console.WriteLine("\nSplit on 5key:\n");
+            foreach (var split in split5)
+            {
+                Console.WriteLine(Basic.BytesToAscii(split));
             }
         }
     }

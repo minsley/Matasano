@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Mime;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -144,30 +145,41 @@ namespace Matasano.Test
                 cipherText = sb.ToString();
             }
 
-            var keysize = Basic.GetKeysize(Basic.AsciiToBytes(cipherText.Substring(0,maxKeysize*2)), maxKeysize);
+            // TODO REMOVE THIS
+            //var cipherText = "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f";
+            //var maxKeysize = 3;
+            //var cipherBytes = Basic.HexToByteArray(cipherText);
 
+            var keysize = Basic.GetKeysize(Basic.AsciiToBytes(cipherText.Substring(0, maxKeysize * 2)), maxKeysize);
 
-            var cipherBytes = Basic.AsciiToBytes(cipherText);
+            var cipherBytes = Basic.Base64ToBytes(cipherText);
 
-            var cipherBlocks = new List<byte[]>();
-            for(var i=0; i<keysize; i++) cipherBlocks.Add(new byte[cipherText.Length/keysize]);
+            var cipherBlocks = Basic.GetRepeatKeySplit(cipherBytes, keysize);
 
-            for (var i = 0; i < cipherText.Length; i++)
-            {
-                if(i + keysize > cipherText.Length) break;
-                cipherBlocks[i%keysize][i/keysize] = cipherBytes[i];
-            }
+            const int numKeysToTry = 4;
 
-            var keys = new List<byte>();
-            foreach (var block in cipherBlocks)
+            var keys = new List<byte[]>();
+            for (var i = 0; i < numKeysToTry; i++)
+                keys.Add(new byte[keysize]);
+
+            for (var i=0; i < cipherBlocks.Count; i++)
             {
                 List<Tuple<double, byte, char>> matches;
-                Basic.IsLanguage(block, Basic.EnglishCharacterFrequencies, out matches);
-                keys.Add(Basic.GetKeysFromLanguageMatches(matches, 1)[0]); 
+                Basic.IsLanguage(cipherBlocks[i], Basic.EnglishCharacterFrequencies, out matches);
+
+                var keyBytes = Basic.GetKeysFromLanguageMatches(matches, numKeysToTry);
+                for (var j=0; j < keyBytes.Count(); j++)
+                    keys[j][i] = keyBytes[j];
             }
 
-            var messageBytes = Basic.XorRepeatKey(cipherBytes, keys.ToArray());
-            Console.WriteLine(Basic.BytesToAscii(messageBytes));
+            var snippet = new byte[60];
+            Array.Copy(cipherBytes, snippet, 60);
+
+            foreach (var key in keys)
+            {
+                var messageBytes = Basic.XorRepeatKey(cipherBytes, key);
+                Console.WriteLine(Basic.BytesToAscii(messageBytes));
+            }
         }
     }
 }

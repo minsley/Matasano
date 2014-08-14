@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -65,11 +66,6 @@ namespace Matasano
             return BitConverter.ToString(bytes).Replace("-", "").ToLower();
         }
 
-        public static string ByteArrayToBase64(byte[] byteArray)
-        {
-            return Convert.ToBase64String(byteArray);
-        }
-
         public static byte[] HexToByteArray(string hexInput)
         {
             if (hexInput.Length%2 != 0) hexInput = "0" + hexInput;
@@ -83,7 +79,17 @@ namespace Matasano
 
         public static string HexToBase64(string hexInput)
         {
-            return ByteArrayToBase64(HexToByteArray(hexInput));
+            return BytesToBase64(HexToByteArray(hexInput));
+        }
+
+        public static byte[] Base64ToBytes(string cipherText)
+        {
+            return Convert.FromBase64String(cipherText);
+        }
+
+        public static string BytesToBase64(byte[] byteArray)
+        {
+            return Convert.ToBase64String(byteArray);
         }
 
         public static byte[] Xor(byte[] buf1, byte[] buf2)
@@ -203,6 +209,8 @@ namespace Matasano
                 matches.Add(new Tuple<double, byte, char>(value, top.Item2, top.Item3));
             }
 
+            matches.Sort((first, next) => next.Item1.CompareTo(first.Item1));
+
             return matches.Sum(match => match.Item1);
         }
 
@@ -222,32 +230,61 @@ namespace Matasano
             return keys.OrderByDescending(x => x.Value).ToList().GetRange(0,count).Select(x => x.Key).ToArray();
         }
 
-        public static int GetKeysize(byte[] cipher, int maxKeysize)
+        public static int GetKeysize(byte[] cipher, int maxKeysize, int n = 2)
         {
-            if(cipher.Length < 2*maxKeysize) throw new Exception("MaxKeysize too large for given cipher.");
+            if(n < 2) throw new Exception("N must be greater than or equal to 2 (default).");
+            if(cipher.Length < n*maxKeysize) throw new Exception("Cihper length must be greater than mayKeysize * n.");
 
             var bestKeysize = 0;
             var leastNormalizedEditDistance = double.MaxValue;
 
-            var keysizes = new int[maxKeysize - 1];
-            for (var i = 0; i < maxKeysize-1; i++) keysizes[i] = i+1;
+            var keysizes = new int[maxKeysize];
+            for (var i = 0; i < maxKeysize; i++) keysizes[i] = i+1;
 
             foreach (var keysize in keysizes)
             {
-                var cipher1 = new byte[keysize];
-                var cipher2 = new byte[keysize];
-                Array.Copy(cipher, cipher1, keysize);
-                Array.Copy(cipher, keysize, cipher2, 0, keysize);
-
-                var normalizedEditDistance = (double)GetHammingDistance(cipher1, cipher2) / keysize;
-                if (normalizedEditDistance < leastNormalizedEditDistance)
+                var chunks = new List<byte[]>();
+                for (var i = 0; i < n; i++)
                 {
-                    leastNormalizedEditDistance = normalizedEditDistance;
+                    var temp = new byte[keysize];
+                    Array.Copy(cipher,i*keysize,temp,0,keysize);
+                    chunks.Add(temp);
+                }
+
+                var normalizedEditDistances = new List<double>();
+                for (int i = 0; i < n; i++)
+                {
+                    for (int j = i+1; j < n; j++)
+                    {
+                        normalizedEditDistances.Add((double)GetHammingDistance(chunks[i], chunks[j])/keysize);
+                    }
+                }
+
+                var meanNormalizedEditDistance = normalizedEditDistances.Average();
+                if (meanNormalizedEditDistance < leastNormalizedEditDistance)
+                {
+                    leastNormalizedEditDistance = meanNormalizedEditDistance;
                     bestKeysize = keysize;
                 }
             }
 
             return bestKeysize;
+        }
+
+        public static List<byte[]> GetRepeatKeySplit(byte[] cipher, int keylength)
+        {
+            var splits = new List<byte[]>();
+            for (var i = 0; i < keylength; i++)
+                splits.Add(new byte[cipher.Length / keylength]);
+
+            var tail = cipher.Length % keylength;
+
+            for (var i = 0; i < cipher.Length - tail; i++)
+            {
+                splits[i % keylength][i / keylength] = cipher[i];
+            }
+
+            return splits;
         }
     }
 }
