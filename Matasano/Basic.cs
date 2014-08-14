@@ -221,5 +221,33 @@ namespace Matasano
 
             return keys.OrderByDescending(x => x.Value).ToList().GetRange(0,count).Select(x => x.Key).ToArray();
         }
+
+        public static int GetKeysize(byte[] cipher, int maxKeysize)
+        {
+            if(cipher.Length < 2*maxKeysize) throw new Exception("MaxKeysize too large for given cipher.");
+
+            var bestKeysize = 0;
+            var leastNormalizedEditDistance = double.MaxValue;
+
+            var keysizes = new int[maxKeysize - 1];
+            for (var i = 0; i < maxKeysize-1; i++) keysizes[i] = i+1;
+
+            foreach (var keysize in keysizes)
+            {
+                var cipher1 = new byte[keysize];
+                var cipher2 = new byte[keysize];
+                Array.Copy(cipher, cipher1, keysize);
+                Array.Copy(cipher, keysize, cipher2, 0, keysize);
+
+                var normalizedEditDistance = (double)GetHammingDistance(cipher1, cipher2) / keysize;
+                if (normalizedEditDistance < leastNormalizedEditDistance)
+                {
+                    leastNormalizedEditDistance = normalizedEditDistance;
+                    bestKeysize = keysize;
+                }
+            }
+
+            return bestKeysize;
+        }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Mime;
+using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Matasano.Test
@@ -36,6 +37,7 @@ namespace Matasano.Test
             Assert.AreEqual(Basic.BytesToHex(xor).ToUpper(), target.ToUpper());
         }
 
+        // Single-byte xor
         [TestMethod]
         public void TestS1C3()
         {
@@ -65,6 +67,7 @@ namespace Matasano.Test
             }
         }
 
+        // Detect single-character xor
         [TestMethod]
         public void TestS1C4()
         {
@@ -107,6 +110,7 @@ namespace Matasano.Test
             }
         }
 
+        // Implement repeating-key xor
         [TestMethod]
         public void TestS1C5()
         {
@@ -121,13 +125,49 @@ namespace Matasano.Test
             Assert.AreEqual(target, eMessage);
         }
 
+        // Break repeating-key Xor (Vignere Cipher)
         [TestMethod]
         public void TestS1C6()
         {
-            var keysizes = new int[38];
-            for (var i = 2; i < 41; i++) keysizes[i] = i;
+            const int maxKeysize = 40;
+            const string filePath = @"..\..\Assets\S1C6.txt";
+
+            string cipherText;
+
+            using (var s = new StreamReader(filePath))
+            {
+                var sb = new StringBuilder();
+                while (!s.EndOfStream)
+                {
+                    sb.Append(s.ReadLine());
+                }
+                cipherText = sb.ToString();
+            }
+
+            var keysize = Basic.GetKeysize(Basic.AsciiToBytes(cipherText.Substring(0,maxKeysize*2)), maxKeysize);
 
 
+            var cipherBytes = Basic.AsciiToBytes(cipherText);
+
+            var cipherBlocks = new List<byte[]>();
+            for(var i=0; i<keysize; i++) cipherBlocks.Add(new byte[cipherText.Length/keysize]);
+
+            for (var i = 0; i < cipherText.Length; i++)
+            {
+                if(i + keysize > cipherText.Length) break;
+                cipherBlocks[i%keysize][i/keysize] = cipherBytes[i];
+            }
+
+            var keys = new List<byte>();
+            foreach (var block in cipherBlocks)
+            {
+                List<Tuple<double, byte, char>> matches;
+                Basic.IsLanguage(block, Basic.EnglishCharacterFrequencies, out matches);
+                keys.Add(Basic.GetKeysFromLanguageMatches(matches, 1)[0]); 
+            }
+
+            var messageBytes = Basic.XorRepeatKey(cipherBytes, keys.ToArray());
+            Console.WriteLine(Basic.BytesToAscii(messageBytes));
         }
     }
 }
