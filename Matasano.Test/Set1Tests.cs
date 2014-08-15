@@ -6,6 +6,7 @@ using System.Net.Mime;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Security.Cryptography;
 
 namespace Matasano.Test
 {
@@ -188,6 +189,20 @@ namespace Matasano.Test
             }
 
             Console.WriteLine(Basic.BytesToAscii(Basic.XorRepeatKey(cipherBytes, bestKey)));
+        }
+
+        [TestMethod]
+        public void TestS1C7()
+        {
+            const string key = "YELLOW SUBMARINE";
+            const string path = @"..\..\Assets\S1C7.txt";
+
+            var input = Basic.Base64ToBytes(Basic.GetFileText(path));
+            var keyBytes = Basic.AsciiToBytes(key);
+
+            var message = Basic.DecryptAes128Ecb(input, keyBytes);
+
+            Console.WriteLine(Basic.BytesToAscii(message));
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Remoting.Messaging;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -298,6 +299,42 @@ namespace Matasano
             }
 
             return splits;
+        }
+
+        public static byte[] DecryptAes128Ecb(byte[] cipher, byte[] key)
+        {
+            using (
+                var aesAlg = new AesManaged
+                {
+                    KeySize = 128,
+                    Key = key,
+                    BlockSize = 128,
+                    Mode = CipherMode.ECB,
+                    Padding = PaddingMode.Zeros,
+                    IV = new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+                })
+            {
+                ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
+                return decryptor.TransformFinalBlock(cipher, 0, cipher.Length);
+            }
+        }
+
+        public static byte[] EncryptAes128Ecb(byte[] cihper, byte[] key)
+        {
+            using (
+                var aesAlg = new AesManaged
+                {
+                    KeySize = 128,
+                    Key = cihper,
+                    BlockSize = 128,
+                    Mode = CipherMode.ECB,
+                    Padding = PaddingMode.Zeros,
+                    IV = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+                })
+            {
+                ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
+                return encryptor.TransformFinalBlock(cihper, 0, cihper.Length);
+            }
         }
     }
 }
