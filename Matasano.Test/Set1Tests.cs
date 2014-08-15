@@ -204,5 +204,42 @@ namespace Matasano.Test
 
             Console.WriteLine(Basic.BytesToAscii(message));
         }
+
+        [TestMethod]
+        public void TestS1C8()
+        {
+            /* Strategy:
+             * 1. For each ciphertext, break into 128bit blocks
+             * 2. Look for repeating blocks (identical plaintext will produce identical ciphertext under ecb)
+             */
+
+            const string path = @"..\..\Assets\S1C8.txt";
+
+            var cipherText = Basic.GetFileTextLines(path);
+
+            var mostRepeats = 0;
+            var possibleEcb = "";
+            foreach (var cipher in cipherText.Split('\n'))
+            {
+                var blocks = new Dictionary<string, int>();
+                for (int i = 0; i < cipher.Length; i+=16)
+                {
+                    var block = cipher.Substring(i, 16);
+                    if (blocks.ContainsKey(block)) 
+                        blocks[block]++;
+                    else
+                        blocks.Add(block, 1);
+                }
+
+                var repeats = blocks.Sum(x => x.Value);
+                if (repeats > mostRepeats)
+                {
+                    mostRepeats = repeats;
+                    possibleEcb = cipher;
+                }
+            }
+
+            Console.WriteLine("{0} repeating blocks were found.\nThe ECB cipher is probably:\n\n{1}",mostRepeats , possibleEcb);
+        }
     }
 }

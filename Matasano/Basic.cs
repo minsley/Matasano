@@ -106,6 +106,14 @@ namespace Matasano
             }
         }
 
+        public static string GetFileTextLines(string path)
+        {
+            using (var s = new StreamReader(path))
+            {
+                return s.ReadToEnd();
+            }
+        }
+
         public static byte[] Xor(byte[] buf1, byte[] buf2)
         {
             if (buf1.Length != buf2.Length) throw new Exception("Xor inputs must be equal length.");

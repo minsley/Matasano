@@ -70,6 +70,7 @@
     <Content Include="Assets\S1C4.txt" />
     <Content Include="Assets\S1C6.txt" />
     <Content Include="Assets\S1C7.txt" />
+    <Content Include="Assets\S1C8.txt" />
     <Content Include="Assets\TestIsEnglishDistributed.txt" />
   </ItemGroup>
   <Choose>
