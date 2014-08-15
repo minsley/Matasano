@@ -66,7 +66,7 @@ namespace Matasano
             return BitConverter.ToString(bytes).Replace("-", "").ToLower();
         }
 
-        public static byte[] HexToByteArray(string hexInput)
+        public static byte[] HexToBytes(string hexInput)
         {
             if (hexInput.Length%2 != 0) hexInput = "0" + hexInput;
             var byteArray = new byte[hexInput.Length/2];
@@ -79,7 +79,7 @@ namespace Matasano
 
         public static string HexToBase64(string hexInput)
         {
-            return BytesToBase64(HexToByteArray(hexInput));
+            return BytesToBase64(HexToBytes(hexInput));
         }
 
         public static byte[] Base64ToBytes(string cipherText)
@@ -90,6 +90,19 @@ namespace Matasano
         public static string BytesToBase64(byte[] byteArray)
         {
             return Convert.ToBase64String(byteArray);
+        }
+
+        public static string GetFileText(string path)
+        {
+            using (var s = new StreamReader(path))
+            {
+                var sb = new StringBuilder();
+                while (!s.EndOfStream)
+                {
+                    sb.Append(s.ReadLine());
+                }
+                return sb.ToString();
+            }
         }
 
         public static byte[] Xor(byte[] buf1, byte[] buf2)
@@ -233,7 +246,7 @@ namespace Matasano
         public static int GetKeysize(byte[] cipher, int maxKeysize, int n = 2)
         {
             if(n < 2) throw new Exception("N must be greater than or equal to 2 (default).");
-            if(cipher.Length < n*maxKeysize) throw new Exception("Cihper length must be greater than mayKeysize * n.");
+            if(cipher.Length < n*maxKeysize) throw new Exception("Cipher length must be greater than mayKeysize * n.");
 
             var bestKeysize = 0;
             var leastNormalizedEditDistance = double.MaxValue;

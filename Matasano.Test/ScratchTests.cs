@@ -126,5 +126,14 @@ namespace Matasano.Test
                 Console.WriteLine(Basic.BytesToAscii(split));
             }
         }
+
+        [TestMethod]
+        public void EncipherText()
+        {
+            var message = Basic.AsciiToBytes(Basic.GetFileText(@"..\..\Assets\TestIsEnglishDistributed.txt"));
+            var key = Basic.AsciiToBytes("ICE");
+            var cipher = Basic.XorRepeatKey(message, key);
+            Console.WriteLine(Basic.BytesToHex(cipher));
+        }
     }
 }
