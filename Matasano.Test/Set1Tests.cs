@@ -217,18 +217,23 @@ namespace Matasano.Test
 
             var cipherText = Basic.GetFileTextLines(path);
 
+            var repeatList = new Dictionary<string, int>();
+
             var mostRepeats = 0;
             var possibleEcb = "";
-            foreach (var cipher in cipherText.Split('\n'))
+            var ciphers = cipherText.Split('\n');
+            foreach (var cipher in ciphers)
             {
                 var blocks = new Dictionary<string, int>();
-                for (int i = 0; i < cipher.Length; i+=16)
+                for (var i = 0; i < cipher.Length; i+=16)
                 {
+                    if (i + 16 > cipher.Length) break;
+
                     var block = cipher.Substring(i, 16);
                     if (blocks.ContainsKey(block)) 
                         blocks[block]++;
                     else
-                        blocks.Add(block, 1);
+                        blocks.Add(block, 0);
                 }
 
                 var repeats = blocks.Sum(x => x.Value);
@@ -237,9 +242,15 @@ namespace Matasano.Test
                     mostRepeats = repeats;
                     possibleEcb = cipher;
                 }
-            }
 
-            Console.WriteLine("{0} repeating blocks were found.\nThe ECB cipher is probably:\n\n{1}",mostRepeats , possibleEcb);
+                repeatList.Add(cipher, repeats);
+            }
+            foreach (var r in repeatList)
+            {
+                if (r.Key.Length < 10) continue;
+                Console.WriteLine(r.Key.Substring(0,10) + "... " + r.Value);
+            }
+            Console.WriteLine("\n{0} repeating blocks were found.\nThe ECB cipher is probably:\n\n{1}",mostRepeats , possibleEcb);
         }
     }
 }

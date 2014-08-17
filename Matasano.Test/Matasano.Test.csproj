@@ -57,6 +57,7 @@
     <Compile Include="ScratchTests.cs" />
     <Compile Include="Set1Tests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Set2Tests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Matasano\Matasano.csproj">
