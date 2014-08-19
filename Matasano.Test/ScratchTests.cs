@@ -135,5 +135,80 @@ namespace Matasano.Test
             var cipher = Basic.XorRepeatKey(message, key);
             Console.WriteLine(Basic.BytesToHex(cipher));
         }
+
+        [TestMethod]
+        public void TestBlockify()
+        {
+            var message = "YELLOW SUBMARINE";
+            Console.WriteLine("input: {0}", message);
+
+            var input = Basic.AsciiToBytes(message);
+
+            var blocked = Basic.Aes.Util.Blockify(input, 4, input.Length/4);
+
+            for (var i = 0; i < blocked.GetLength(0); i++)
+            {
+                for (var j = 0; j < blocked.GetLength(1); j++)
+                {
+                    Console.Write((char)blocked[i,j] + " ");
+                }
+                Console.Write('\n');
+            }
+
+            var unblocked = Basic.Aes.Util.Unblockify(blocked);
+
+            var output = Basic.BytesToAscii(unblocked);
+            Console.WriteLine("output: {0}", output);
+
+            Assert.AreEqual(message, output);
+        }
+
+        [TestMethod]
+        public void TestShiftRows()
+        {
+            var start = new byte[4,4]
+            {
+                {0,1,2,3},
+                {0,1,2,3},
+                {0,1,2,3},
+                {0,1,2,3}
+            };
+
+            var end = new byte[4, 4];
+            Array.Copy(start, end, 16);
+
+            for (var i = 0; i < end.GetLength(0); i++)
+            {
+                for (var j = 0; j < end.GetLength(1); j++)
+                {
+                    Console.Write(end[i, j] + " ");
+                }
+                Console.Write('\n');
+            }
+            Console.WriteLine();
+
+            Basic.Aes.Util.ShiftRows(ref end, true);
+
+            for (var i = 0; i < end.GetLength(0); i++)
+            {
+                for (var j = 0; j < end.GetLength(1); j++)
+                {
+                    Console.Write(end[i, j] + " ");
+                }
+                Console.Write('\n');
+            }
+            Console.WriteLine();
+
+            Basic.Aes.Util.ShiftRows(ref end, false);
+
+            for (var i = 0; i < start.GetLength(0); i++)
+            {
+                for (var j = 0; j < end.GetLength(1); j++)
+                {
+                    Console.Write(end[i, j] + " ");
+                }
+                Console.Write('\n');
+            }
+        }
     }
 }
