@@ -187,7 +187,7 @@ namespace Matasano.Test
             }
             Console.WriteLine();
 
-            Basic.Aes.Util.ShiftRows(ref end, true);
+            Basic.Aes.Util.ShiftRows(ref end, false);
 
             for (var i = 0; i < end.GetLength(0); i++)
             {
@@ -199,7 +199,7 @@ namespace Matasano.Test
             }
             Console.WriteLine();
 
-            Basic.Aes.Util.ShiftRows(ref end, false);
+            Basic.Aes.Util.ShiftRows(ref end, true);
 
             for (var i = 0; i < start.GetLength(0); i++)
             {
@@ -209,6 +209,52 @@ namespace Matasano.Test
                 }
                 Console.Write('\n');
             }
+        }
+
+        [TestMethod]
+        public void TestMixColumns()
+        {
+            var test1 = new byte[,]
+            {
+                {219, 242},
+                {19, 10},
+                {83, 34},
+                {69, 92}
+            };
+
+            for (int i = 0; i < test1.GetLength(0); i++)
+            {
+                for (int j = 0; j < test1.GetLength(1); j++)
+                {
+                    Console.Write(test1[i, j] + " ");
+                }
+                Console.Write('\n');
+            }
+            Console.WriteLine();
+
+            Basic.Aes.Util.MixColumns(ref test1);
+
+            for (int i = 0; i < test1.GetLength(0); i++)
+            {
+                for (int j = 0; j < test1.GetLength(1); j++)
+                {
+                    Console.Write(test1[i, j] + " ");
+                }
+                Console.Write('\n');
+            }
+            Console.WriteLine();
+
+            Basic.Aes.Util.MixColumns(ref test1, true);
+
+            for (int i = 0; i < test1.GetLength(0); i++)
+            {
+                for (int j = 0; j < test1.GetLength(1); j++)
+                {
+                    Console.Write(test1[i, j] + " ");
+                }
+                Console.Write('\n');
+            }
+            Console.WriteLine();
         }
     }
 }
