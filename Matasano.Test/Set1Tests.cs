@@ -200,7 +200,7 @@ namespace Matasano.Test
             var input = Basic.Base64ToBytes(Basic.GetFileText(path));
             var keyBytes = Basic.AsciiToBytes(key);
 
-            var message = Basic.Aes.DecryptAes128Ecb(input, keyBytes);
+            var message = Basic.Aes.RunAes(input, keyBytes, true);
             var control = Basic.Aes.MSDecryptAes128Ecb(input, keyBytes);
 
             Console.WriteLine(Basic.BytesToAscii(message));

@@ -360,124 +360,132 @@ namespace Matasano
                 }
             }
 
-            public static byte[] Encrypt(byte[] input, byte[] key)
+            public static byte[] RunAes(byte[] input, byte[] key, bool decrypt = false)
             {
                 var acceptableKeys = new [] {16, 24, 32}; // 128, 192, 256 bit
                 if(!acceptableKeys.Contains(key.Length))
                     throw new Exception("Key must be 128, 192 or 256 bits.");
 
-                var rounds = 0;
-                switch (key.Length)
+                var result = new byte[input.Length];
+                var block = new byte[16];
+                for (int i = 0; i < input.Length; i+=16)
                 {
-                    case 16: rounds = 10; break;
-                    case 24: rounds = 12; break;
-                    case 32: rounds = 14; break;
+                    Array.Copy(input, i, block, 0, 16);
+                    block = Util.AesBlock(block, key, decrypt);
+                    Array.Copy(block, 0, result, i, 16);
                 }
 
-                var expandedKey = Util.ExpandKey(key, rounds);
-
-                var chunk = new byte[16];
-                Array.Copy(input, 0, chunk, 0, 16);
-                var state = Util.Blockify(chunk, 4, 4);
-
-                for (var i = 16; i < input.Length; i+=16)
-                {
-                    
-                }
-
-                throw new NotImplementedException();
-            }
-
-            public static byte[] DecryptAes128Ecb(byte[] cipher, byte[] key)
-            {
-                throw new NotImplementedException();
+                return result;
             }
 
             public static class Util
             {
-                public static void AddRoundKey(ref byte[,] state, byte[,] key)
+                public static byte[] AesBlock(byte[] input, byte[] key, bool decrypt = false)
                 {
-                    var rows = state.GetLength(0);
-                    var cols = state.GetLength(1);
-                    
-                    for (int i = 0; i < rows; i++)
+                    var rounds = 0;
+                    switch (key.Length)
                     {
-                        for (int j = 0; j < cols; j++)
-                        {
-                            state[i, j] = Convert.ToByte(state[i, j] ^ key[i, j]);
-                        }
+                        case 16: rounds = 10; break;
+                        case 24: rounds = 12; break;
+                        case 32: rounds = 14; break;
+                    }
+
+                    var state = new byte[16];
+                    Array.Copy(input, 0, state, 0, 16);
+
+                    var expandedKey = ExpandKey(key, rounds);
+
+                    var roundKey = GetRoundKey(expandedKey, 0);
+                    AddRoundKey(ref state, roundKey);
+
+                    for (var r = 1; r <= rounds; r++)
+                    {
+                        roundKey = GetRoundKey(expandedKey, r);
+                        SubBytes(ref state);
+                        ShiftRows(ref state, decrypt);
+                        if (r != rounds) MixColumns(ref state, decrypt);
+                        AddRoundKey(ref state, roundKey);
+                    }
+
+                    return state;
+                }
+
+                public static byte[] GetRoundKey(byte[] expandedKey, int round)
+                {
+                    var temp = new byte[16];
+                    Array.Copy(expandedKey, round * 16, temp, 0, 16);
+                    return temp;
+                } 
+
+                public static void AddRoundKey(ref byte[] state, byte[] key)
+                {
+                    for (int i = 0; i < state.Length; i++)
+                    {
+                       state[i] = Convert.ToByte(state[i] ^ key[i]);
                     }
                 }
 
-                public static void ShiftRows(ref byte[,] state, bool inverse = false)
+                public static void SubBytes(ref byte[] state, bool inverse = false)
                 {
-                    var rows = state.GetLength(0);
-                    var cols = state.GetLength(1);
+                    var s = inverse ? SboxInv : Sbox;
 
-                    var temp = new byte[rows, cols];
-                    Array.Copy(state, temp, rows*cols);
+                    for (var i = 0; i < state.Length; i++)
+                    {
+                        state[i] = s[state[i]];
+                    }
+                }
+
+                public static void ShiftRows(ref byte[] state, bool inverse = false)
+                {
+                    var temp = new byte[state.Length];
+                    Array.Copy(state, temp, state.Length);
+
+                    var rows = 4;
+                    var cols = state.Length/rows;
 
                     if (inverse) // shift right
                     {
-                        for (int i = 0; i < rows; i++)
+                        for (var row = 0; row < rows; row++)
                         {
-                            for (int j = 0; j < cols; j++)
+                            for (var col = 0; col < cols; col++)
                             {
-                                state[i, j] = temp[i, (cols + j - i) % cols];
+                                state[row*rows + col] = temp[row*rows + (cols + col - row) % cols];
                             }
                         }
                     }
                     else // shift left
                     {
-                        for (int i = 0; i < rows; i++)
+                        for (var row = 0; row < rows; row++)
                         {
-                            for (int j = 0; j < cols; j++)
+                            for (var col = 0; col < cols; col++)
                             {
-                                state[i, j] = temp[i, (j + i)%cols];
+                                state[row*rows + col] = temp[row*rows + (col + row)%cols];
                             }
                         }
                     }
                 }
 
-                public static void MixColumns(ref byte[,] state, bool inverse = false)
+                public static void MixColumns(ref byte[] state, bool inverse = false)
                 {
-                    byte[,] magic;
-                    if (inverse)
-                    {
-                        magic = new byte[,]
-                        {
-                            {14, 11, 13, 9},
-                            {9, 14, 11, 13},
-                            {13, 9, 14, 11},
-                            {11, 13, 9, 14}
-                        };
-                    }
-                    else
-                    {
-                        magic = new byte[,]
-                        {
-                            {2, 3, 1, 1},
-                            {1, 2, 3, 1},
-                            {1, 1, 2, 3},
-                            {3, 1, 1, 2}
-                        };
-                    }
+                    var product = new byte[state.Length];
 
-                    if(magic.GetLength(1) != state.GetLength(0)) throw new Exception("Matrix inner dimensions do not match.");
+                    var rows = 4;
+                    var cols = state.Length/rows;
 
-                    var rows = magic.GetLength(0);
-                    var cols = state.GetLength(1);
+                    var magic = inverse 
+                        ? new byte[] { 14, 11, 13, 9, 9, 14, 11, 13, 13, 9, 14, 11, 11, 13, 9, 14 } 
+                        : new byte[] { 2, 3, 1, 1, 1, 2, 3, 1, 1, 1, 2, 3, 3, 1, 1, 2 };
 
-                    var product = new byte[rows, cols];
+                    if (product.Length%4 != 0) throw new Exception("Matrix inner dimensions do not match.");
 
                     for (int c = 0; c < cols; c++)
                     {
                         for (int r = 0; r < rows; r++)
                         {
-                            product[r, c] = (Byte)(GMultiply(magic[r, 0], state[0, c]) 
-                                                 ^ GMultiply(magic[r, 1], state[1, c]) 
-                                                 ^ GMultiply(magic[r, 2], state[2, c]) 
-                                                 ^ GMultiply(magic[r, 3], state[3, c]));
+                            product[r * rows + c] = (Byte)(GMultiply(magic[r * rows + 0], state[0 * rows + c])
+                                                         ^ GMultiply(magic[r * rows + 1], state[1 * rows + c])
+                                                         ^ GMultiply(magic[r * rows + 2], state[2 * rows + c])
+                                                         ^ GMultiply(magic[r * rows + 3], state[3 * rows + c]));
                         }
                     }
 
@@ -509,63 +517,40 @@ namespace Matasano
                 
                 public static byte[] ExpandKey(byte[] key, int rounds)
                 {
-                    var eKey = new byte[key.Length*(rounds + 1)];
+                    int currentSize = 0;
+                    int rconIteration = 1;
+                    var word = new byte[4];
 
+                    var eKey = new byte[16 * (rounds + 1)];
                     Array.Copy(key, eKey, key.Length);
-
-                    var i = key.Length;
-                    for (int r = 1; r <= rounds; r++)
+                    currentSize += key.Length;
+     
+                    while (currentSize < eKey.Length)
                     {
-                        var word = new byte[4];
-                        Array.Copy(eKey, i-4, word, 0, 4);
 
-                        word  = Util.KeyCore(word, Rcon[i]);
-
-                        Array.Copy(word, 0, eKey, i, 4);
-                        i += 4;
-
-                        foreach (var b in word)
+                        Array.Copy(eKey, currentSize - 4, word, 0, 4);
+         
+                        /* every 16,24,32 bytes we apply the core schedule to word and increment rconIteration afterwards */
+                        if(currentSize % key.Length == 0)
                         {
-                            eKey[i] = (byte) (b ^ eKey[i - 4]);
-                            i++;
+                            word = KeyCore(word, Rcon[rconIteration++]);
                         }
-
-                        for (int j = 0; j < 3; j++)
+ 
+                        /* For 256-bit keys, we add an extra sbox to the calculation */
+                        if (key.Length == 32 && ((currentSize % key.Length) == 16))
                         {
-                            Array.Copy(eKey, i-4, word, 0, 4);
-                            foreach (var b in word)
+                            for (int i = 0; i < word.Length; i++)
                             {
-                                eKey[i] = (byte)(b ^ eKey[i - 4]);
-                                i++;
+                                word[i] = Sbox[word[i]];
                             }
                         }
-
-                        if (key.Length == 32)
-                        {
-                            Array.Copy(eKey, i - 4, word, 0, 4);
-                            for (int j = 0; j < 4; j++)
-                            {
-                                word[j] = Sbox[word[j]];
-                            }
-                            foreach (var b in word)
-                            {
-                                eKey[i] = (byte)(b ^ eKey[i - 4]);
-                                i++;
-                            }
-                        }
-
-                        var k = 0;
-                        if (key.Length == 24) k = 2;
-                        else if (key.Length == 32) k = 3;
-
-                        for (int l = 0; l < k; l++)
-                        {
-                            Array.Copy(eKey, i - 4, word, 0, 4);
-                            foreach (var b in word)
-                            {
-                                eKey[i] = (byte)(b ^ eKey[i - 4]);
-                                i++;
-                            }
+         
+                        /* We XOR the word with the four-byte block 16,24,32 bytes before the new expanded key.
+                         * This becomes the next four bytes in the expanded key.
+                         */
+                        for(var i = 0; i < 4; i++) {
+                            eKey[currentSize] = (byte)(eKey[currentSize - key.Length] ^ word[i]);
+                            currentSize++;
                         }
                     }
 
