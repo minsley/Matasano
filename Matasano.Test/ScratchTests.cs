@@ -280,23 +280,20 @@ namespace Matasano.Test
         [TestMethod]
         public void TestAesBlock()
         {
-            var key = new byte[]
-            {
-                62, 142, 78, 2, 164, 231, 18, 196, 148, 177, 82, 
-                186, 240, 44, 136, 242, 23, 13, 20, 169, 248, 69, 
-                163, 79, 13, 155, 97, 200, 241, 15, 76, 15
-            };
+            // http://seit.unsw.adfa.edu.au/staff/sites/lpb/src/AEScalc/
 
-            var text = new byte[]
-            {
-                72, 105, 114, 111, 32, 80, 114, 111, 116, 97, 103, 111, 110, 105, 115, 116
-            };
+            var key = Basic.HexToBytes("000102030405060708090a0b0c0d0e0f");
+            var text = Basic.HexToBytes("00112233445566778899aabbccddeeff");
+            var cipherText = Basic.HexToBytes("69c4e0d86a7b0430d8cdb78070b4c55a");
 
             var cipher = Basic.Aes.RunAes(text, key);
 
             var decipher = Basic.Aes.RunAes(cipher, key, true);
 
             Console.WriteLine(Basic.BytesToAscii(decipher));
+
+            CollectionAssert.AreEqual(cipher, cipherText);
+            CollectionAssert.AreEqual(decipher, text);
         }
 
         private void PrintByteArray(byte[] array)

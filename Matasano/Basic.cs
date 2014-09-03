@@ -401,7 +401,7 @@ namespace Matasano
                     for (var r = 1; r <= rounds; r++)
                     {
                         roundKey = GetRoundKey(expandedKey, r);
-                        SubBytes(ref state);
+                        SubBytes(ref state, decrypt);
                         ShiftRows(ref state, decrypt);
                         if (r != rounds) MixColumns(ref state, decrypt);
                         AddRoundKey(ref state, roundKey);
