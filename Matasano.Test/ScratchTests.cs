@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Collections.Generic;
@@ -198,43 +199,22 @@ namespace Matasano.Test
         [TestMethod]
         public void TestMixColumns()
         {
-            var control1 = new byte[]
-            {
-                0,1,2,3,4,5,6,7,8,9,19,11,12,13,14,15
-            };
+            //var before = Basic.HexToBytes("dbdbdbdb131313135353535345454545");
+            //var after = Basic.HexToBytes("8e8e8e8e4d4d4d4da1a1a1a1bcbcbcbc");
 
-            var result1 = control1;
+            var before = Basic.HexToBytes("dbf201c6130a01c6532201c6455c01c6");
+            var after = Basic.HexToBytes("8e9f01c64ddc01c6a15801c6bc9d01c6");
 
-            PrintByteArray(result1);
+            var temp = before;
 
-            Basic.Aes.Util.MixColumns(ref result1);
+            PrintByteArray(temp);
+            Basic.Aes.Util.MixColumns(ref temp);
+            PrintByteArray(temp);
+            CollectionAssert.AreEqual(temp, after, "Failed: Mixcolumn did not produce expected result.");
 
-            PrintByteArray(result1);
-
-            Basic.Aes.Util.MixColumns(ref result1, true);
-
-            PrintByteArray(result1);
-
-            CollectionAssert.AreEqual(control1, result1, "Failed: operation is not reversable.");
-            Console.WriteLine();
-
-            var control2 = new byte[]
-            {
-                66, 80, 228, 230, 148, 33, 121, 29, 106, 95, 226, 146, 255, 98, 121, 117
-            };
-
-            var result2 = new byte[]
-            {
-                56, 148, 235, 60, 169, 208, 98, 95, 150, 3, 225, 112, 68, 11, 110, 15
-            };
-
-            PrintByteArray(result2);
-
-            Basic.Aes.Util.MixColumns(ref result2);
-
-            PrintByteArray(result2);
-
-            CollectionAssert.AreEqual(control2, result2, "Failed: Mixcolumn did not produce expected result.");
+            Basic.Aes.Util.MixColumns(ref temp, true);
+            PrintByteArray(temp);
+            CollectionAssert.AreEqual(temp, before, "Failed: Mixcolumn was not invertable.");
         }
 
         [TestMethod]
@@ -275,6 +255,19 @@ namespace Matasano.Test
                 Console.Write(byteString + " ");
             }
             Console.WriteLine();
+        }
+
+        [TestMethod]
+        public void TestTransposeMatrix()
+        {
+            var before = "db135345f20a225c01010101c6c6c6c6";
+            var after = "dbf201c6130a01c6532201c6455c01c6";
+
+            Console.WriteLine("Before: {0}\nGoal: {1}", before, after);
+            var result = Basic.BytesToHex(Basic.Aes.Util.TransposeMatrix(Basic.HexToBytes(before)));
+            Console.WriteLine("Transposed: {0}", result);
+
+            Assert.AreEqual(result, after);
         }
 
         [TestMethod]

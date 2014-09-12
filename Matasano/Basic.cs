@@ -403,7 +403,12 @@ namespace Matasano
                         roundKey = GetRoundKey(expandedKey, r);
                         SubBytes(ref state, decrypt);
                         ShiftRows(ref state, decrypt);
-                        if (r != rounds) MixColumns(ref state, decrypt);
+                        if (r != rounds)
+                        {
+                            state = TransposeMatrix(state);
+                            MixColumns(ref state, decrypt);
+                            state = TransposeMatrix(state);
+                        }
                         AddRoundKey(ref state, roundKey);
                     }
 
@@ -662,6 +667,19 @@ namespace Matasano
                     }
 
                     return output;
+                }
+
+                public static byte[] TransposeMatrix(byte[] input)
+                {
+                    var rows = 4;
+                    var cols = input.Length/rows;
+                    var result = new byte[input.Length];
+                    for (int i = 0; i < input.Length; i++)
+                    {
+                        result[i] = input[i/rows + i%cols*rows];
+                    }
+
+                    return result;
                 }
             }
         }
